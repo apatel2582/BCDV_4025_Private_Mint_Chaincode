@@ -1,0 +1,84 @@
+version: "2"
+
+services:
+  ca_privatemintorg:
+    image: hyperledger/fabric-ca:$CA_VERSION
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-privatemintorg
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+    ports:
+      - "7054:7054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ../crypto-config/peerOrganizations/privatemintorg.example.com/ca/:/etc/hyperledger/fabric-ca-server-config
+
+  ca_bankorg:
+    image: hyperledger/fabric-ca:$CA_VERSION
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-bankorg
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+    ports:
+      - "8054:8054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ../crypto-config/peerOrganizations/bankorg.example.com/ca/:/etc/hyperledger/fabric-ca-server-config
+
+  orderer.consortium:
+    image: hyperledger/fabric-orderer:$FABRIC_VERSION
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=ConsortiumOrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+    ports:
+      - "7050:7050"
+    command: orderer
+    volumes:
+      - ../config:/var/hyperledger/orderer/orderer.genesis.block
+      - ../crypto-config/ordererOrganizations/consortium.example.com/orderers/orderer.consortium.example.com/msp:/var/hyperledger/orderer/msp
+
+  peer0.privatemintorg.example.com:
+    image: hyperledger/fabric-peer:$FABRIC_VERSION
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.privatemintorg.example.com
+      - CORE_PEER_ADDRESS=peer0.privatemintorg.example.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.privatemintorg.example.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.privatemintorg.example.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.privatemintorg.example.com:7051
+      - CORE_PEER_LOCALMSPID=PrivateMintOrgMSP
+    ports:
+      - "7051:7051"
+      - "7053:7053"
+    volumes:
+      - /var/run/:/host/var/run/
+      - ../crypto-config/peerOrganizations/privatemintorg.example.com/peers/peer0.privatemintorg.example.com/msp:/var/hyperledger/peer/msp
+      - ../crypto-config/peerOrganizations/privatemintorg.example.com/peers/peer0.privatemintorg.example.com/tls:/var/hyperledger/peer/tls
+    command: peer node start
+
+  peer0.bankorg.example.com:
+    image: hyperledger/fabric-peer:$FABRIC_VERSION
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_PEER_ID=peer0.bankorg.example.com
+      - CORE_PEER_ADDRESS=peer0.bankorg.example.com:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.bankorg.example.com:9052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.bankorg.example.com:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.bankorg.example.com:9051
+      - CORE_PEER_LOCALMSPID=BankOrgMSP
+    ports:
+      - "9051:9051"
+      - "9053:9053"
+    volumes:
+      - /var/run/:/host/var/run/
+      - ../crypto-config/peerOrganizations/bankorg.example.com/peers/peer0.bankorg.example.com/msp:/var/hyperledger/peer/msp
+      - ../crypto-config/peerOrganizations/bankorg.example.com/peers/peer0.bankorg.example.com/tls:/var/hyperledger/peer/tls
+    command: peer node start
